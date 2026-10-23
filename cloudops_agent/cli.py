@@ -9,9 +9,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .diagnosis import build_report, diagnose_gcp_service
+from .fleet import triage_gcp_services
 from .gcp import GCPError, list_gcp_buckets, list_gcp_instances, list_gcp_services
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
-from .investigation import investigate_gcp_service
+from .investigation import enrich_investigation, investigate_gcp_service
 from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 from .pubsub import diagnose_gcp_subscription, list_gcp_subscriptions
@@ -83,6 +84,11 @@ def main(argv=None):
         choices=("startup-failure", "memory-pressure", "healthy", "missing-permissions"),
         default="startup-failure",
     )
+    demo.add_argument(
+        "--deep",
+        action="store_true",
+        help="Include synthetic resource pressure and revision comparison evidence.",
+    )
     for name in ("diagnose", "investigate", "metrics", "pressure", "errors", "timeline", "slo"):
         item = command(name, "Read-only Cloud Run " + name + ".")
         item.add_argument("service")
@@ -98,6 +104,9 @@ def main(argv=None):
     compare.add_argument("service")
     compare.add_argument("before")
     compare.add_argument("after")
+    fleet = command("fleet", "Triage up to five regional services with coverage reporting.")
+    fleet.add_argument("--limit", type=int, default=5)
+    fleet.add_argument("--hours", type=int, default=1)
     jobs = command("jobs", "List regional Cloud Run Jobs.")
     jobs.add_argument("--limit", type=int, default=100)
     executions = command("executions", "Inspect a job's recent executions.")
@@ -126,6 +135,51 @@ def main(argv=None):
                 files("cloudops_agent").joinpath("fixtures", args.scenario + ".json").read_text()
             )
             report = build_report("demo-api", "demo-project", "us-central1", fixture)
+            if args.deep:
+                memory = 0.95 if args.scenario == "memory-pressure" else 0.3
+                pressure = {
+                    "data_status": "available",
+                    "partial": False,
+                    "utilization": {
+                        "memory": [
+                            {"weighted_mean": memory, "highest_interval_mean": memory, "sample_count": 10}
+                        ]
+                    },
+                    "pressure_signals": (
+                        [
+                            {
+                                "resource": "memory",
+                                "revision": "demo-api-001",
+                                "highest_interval_mean": memory,
+                                "threshold": 0.85,
+                            }
+                        ]
+                        if memory >= 0.85
+                        else []
+                    ),
+                }
+                comparison = (
+                    {
+                        "changes": [
+                            {
+                                "field": "containers.container-0.image",
+                                "before": "example.invalid/demo:v1",
+                                "after": "example.invalid/demo:v2",
+                            }
+                        ],
+                        "partial": False,
+                    }
+                    if args.scenario == "startup-failure"
+                    else None
+                )
+                if args.scenario == "missing-permissions":
+                    pressure = {
+                        "error": {
+                            "code": "permission_denied",
+                            "message": "Synthetic missing Monitoring Viewer permission.",
+                        }
+                    }
+                report = enrich_investigation(report, pressure, comparison)
             report.update(
                 mode="offline_demo",
                 notice="Synthetic fixture data; not live cloud infrastructure. observed_at is report generation time.",
@@ -146,6 +200,7 @@ def main(argv=None):
                 ),
                 "revisions": lambda: list_gcp_revisions(args.service, args.limit),
                 "compare": lambda: compare_gcp_revisions(args.service, args.before, args.after),
+                "fleet": lambda: triage_gcp_services(args.limit, args.hours),
                 "jobs": lambda: list_gcp_jobs(args.limit),
                 "executions": lambda: list_gcp_job_executions(args.job, args.limit),
                 "diagnose-job": lambda: diagnose_gcp_job(args.job, args.stale_after_hours),

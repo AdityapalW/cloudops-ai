@@ -105,3 +105,9 @@ cloudops investigate api --hours 1 --format markdown --output /tmp/cloudops-inve
 ```
 
 The deeper workflow reuses the diagnosis's log/revision sample, adds CPU/memory evidence, and compares the latest ready and newest created revision only when they differ. It includes a compact error-pattern index and a timeline, with new findings linked to evidence IDs. All nested calls share one collection deadline. Configuration changes alone are informational, not proof of an incident.
+
+## Triage the regional fleet
+
+`cloudops fleet --limit 5 --hours 1` inspects up to five services, prioritizing failed readiness and then reconciliation. The report names uninspected services and marks incomplete coverage. It does not present a sampled regional subset as a project-wide health assessment. Log payloads are omitted from the compact fleet response; collect a per-service investigation for full evidence.
+
+Use `cloudops demo --deep --scenario memory-pressure --format markdown` to exercise the richer report entirely offline. The added resource and comparison evidence is explicitly synthetic.

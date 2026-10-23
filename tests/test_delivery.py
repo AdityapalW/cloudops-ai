@@ -147,3 +147,21 @@ class ExtendedApiTest(unittest.TestCase):
                         {"changes": []},
                     )
                     self.assertTrue(client.get("/v1/configuration-snapshot").json()["complete"])
+
+
+class DeepDemoTest(unittest.TestCase):
+    def test_deep_demo_has_resource_and_comparison_evidence_without_network(self):
+        with patch("cloudops_agent.gcp._session", side_effect=AssertionError("unexpected cloud call")):
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(main(["demo", "--deep"]), 0)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["workflow"], "cloud_run_investigation/v1")
+        self.assertTrue(
+            {"resource_pressure", "revision_comparison"} <= {e["source"] for e in report["evidence"]}
+        )
+
+    def test_deep_memory_demo_explains_pressure_signal(self):
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(["demo", "--deep", "--scenario", "memory-pressure"]), 0)
+        report = json.loads(output.getvalue())
+        self.assertIn("resource_pressure_signal", {f["code"] for f in report["findings"]})

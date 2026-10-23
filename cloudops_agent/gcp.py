@@ -140,10 +140,10 @@ def _api_failure(response):
     if isinstance(error, dict):
         reasons = [
             entry.get("reason")
-            for entry in error.get("details", [])
+            for entry in (error.get("details") or [])
             if isinstance(entry, dict) and entry.get("@type") == "type.googleapis.com/google.rpc.ErrorInfo"
         ]
-        reasons += [entry.get("reason") for entry in error.get("errors", []) if isinstance(entry, dict)]
+        reasons += [entry.get("reason") for entry in (error.get("errors") or []) if isinstance(entry, dict)]
     known = {
         "SERVICE_DISABLED": (
             "api_disabled",
@@ -164,7 +164,7 @@ def _api_failure(response):
         ),
     }
     for reason in reasons:
-        if reason in known:
+        if isinstance(reason, str) and reason in known:
             code, message = known[reason]
             break
     return GCPError(code, message)

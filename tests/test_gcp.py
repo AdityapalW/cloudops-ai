@@ -217,3 +217,12 @@ class ApiFailureReasonTest(unittest.TestCase):
         self.assertEqual(gcp._api_failure(response).code, "api_disabled")
         response.json.return_value = {"error": {"message": "private"}}
         self.assertEqual(gcp._api_failure(response).code, "permission_denied_or_api_disabled")
+
+    def test_malformed_error_metadata_does_not_hide_http_failure(self):
+        response = MagicMock(status_code=403)
+        response.json.return_value = {"error": {"details": None, "errors": None}}
+        self.assertEqual(gcp._api_failure(response).code, "permission_denied_or_api_disabled")
+        response.json.return_value = {
+            "error": {"details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": {}}]}
+        }
+        self.assertEqual(gcp._api_failure(response).code, "permission_denied_or_api_disabled")

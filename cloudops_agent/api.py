@@ -6,6 +6,7 @@ from fastapi import FastAPI, Path, Query
 from fastapi.responses import JSONResponse
 
 from .diagnosis import diagnose_gcp_service
+from .fleet import triage_gcp_services
 from .gcp import list_gcp_services
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
 from .investigation import investigate_gcp_service
@@ -147,3 +148,8 @@ def subscription_diagnosis(
 @app.get("/v1/services/{service_name}/investigation")
 def investigation(service_name: ServiceID, hours: Annotated[int, Query(ge=1, le=24)] = 1):
     return _response(investigate_gcp_service(service_name, hours))
+
+
+@app.get("/v1/fleet")
+def fleet(limit: Annotated[int, Query(ge=1, le=5)] = 5, hours: Annotated[int, Query(ge=1, le=24)] = 1):
+    return _response(triage_gcp_services(limit, hours))
