@@ -61,3 +61,9 @@ Tests mock GCP APIs and require no cloud credentials. Live authentication, API p
 API references: [Cloud Run](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services), [Logging](https://docs.cloud.google.com/logging/docs/reference/v2/rest/v2/entries/list), [Compute Engine](https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/aggregatedList), [Storage](https://docs.cloud.google.com/storage/docs/json_api/v1/buckets/list).
 
 Metrics use raw DELTA samples over 1–24 hours, capped at 10,000 points per metric and 20 pages. Missing data remains unknown. Mean latency is weighted by distribution sample count in milliseconds; percentiles are not inferred. OAuth uses the Cloud Platform scope required by these endpoints; IAM grants determine actual access, and tools issue read requests only.
+
+## Cloud Run diagnosis
+
+Ask “Why is the api service failing?” to invoke `diagnose_gcp_service`. It collects service readiness, the newest ten revisions, the latest 50 ERROR-or-higher logs, and request metrics for the requested 1–24 hour window. Reports include evidence IDs, observations, possible causes, suggested checks, and explicit collection gaps. `no_issue_detected` is limited to the collected evidence; missing telemetry cannot establish health. Log signatures and revision timing suggest checks rather than prove causation.
+
+Common secret keys and token patterns are redacted, with depth and string-size limits. This is best effort, not a guarantee that logs contain no sensitive data. Source log access must remain appropriately restricted. Set `CLOUDOPS_MODEL` to override the default chat model.

@@ -8,6 +8,8 @@ from functools import wraps
 from urllib.parse import quote
 
 import google.auth
+
+from .redaction import redact
 from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport.requests import AuthorizedSession
 from requests.exceptions import RequestException
@@ -158,7 +160,7 @@ def list_gcp_logs(service_name: str = "", severity: str = "DEFAULT", hours: int 
                 break
             body["pageToken"] = token
     return {"provider": "gcp", "project": project, "filter": body["filter"],
-            "entries": [{k: e[k] for k in ("timestamp", "severity", "logName", "resource", "textPayload", "jsonPayload", "httpRequest") if k in e}
+            "entries": [redact({k: e[k] for k in ("timestamp", "severity", "logName", "resource", "textPayload", "jsonPayload", "httpRequest") if k in e})
                         for e in entries[:limit]], "truncated": bool(token)}
 
 
