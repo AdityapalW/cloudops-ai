@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -r requirements-dev.lock
+      - run: python -m pip install --no-deps .
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -m unittest discover -s tests -v
+      - run: python -m cloudops_agent.cli demo --scenario startup-failure
+      - run: python -m pip check
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t cloudops-ai:test .
+      - name: Verify container startup and health
+        run: |
+          docker run --rm -d --name cloudops -p 127.0.0.1:8080:8080 cloudops-ai:test
+          trap 'docker logs cloudops; docker stop cloudops' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:8080/healthz; then exit 0; fi
+            sleep 2
+          done
+          exit 1

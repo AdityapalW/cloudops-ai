@@ -1,0 +1,14 @@
+**/.env
+**/.env.*
+**/.adk
+**/__pycache__
+.venv
+.git
+.aws
+.codex
+.agents
+tests
+docs
+scripts
+*.db
+*.log
