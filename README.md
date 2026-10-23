@@ -47,7 +47,7 @@ Examples:
 - “Show all VMs in this project.”
 - “List my storage buckets and whether versioning is enabled.”
 
-Inventory tools default to 100 results (maximum 500). Logs default to the last hour and 50 results (maximum 200, up to 168 hours). Pagination is bounded to 20 requests per call and requests use a 30-second timeout. Check `truncated`, `partial`, and warnings before interpreting an inventory as complete. Rerun with narrower log filters or a higher limit when necessary. Errors are structured and distinct from empty results.
+Inventory tools default to 100 results (maximum 500). Logs default to the last hour and 50 results (maximum 200, up to 168 hours). Pagination is bounded to 20 requests per call and requests use a 30-second timeout. Each tool call has a shared 120-second collection budget, including nested diagnosis tools; credential refresh has a 15-second timeout. Check `truncated`, `partial`, and warnings before interpreting an inventory as complete. Rerun with narrower log filters or a higher limit when necessary. Errors are structured and distinct from empty results.
 
 Service inspection excludes environment variables and secret references. Logs may still contain sensitive application data; use appropriately restricted log access. Bucket metadata does not establish effective public access, and service readiness alone does not establish application health. Tools make no infrastructure changes; the Logging POST endpoint is a read query.
 

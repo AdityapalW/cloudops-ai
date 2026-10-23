@@ -23,6 +23,7 @@ def _response(result):
         "not_found": 404,
         "quota_exceeded": 503,
         "network_error": 503,
+        "deadline_exceeded": 504,
         "api_error": 502,
         "invalid_response": 502,
         "read_only_violation": 500,

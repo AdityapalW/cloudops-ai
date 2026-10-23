@@ -3,16 +3,21 @@
 import json
 import os
 import re
+import time
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import quote, urlparse
 
 import google.auth
 from google.auth.exceptions import GoogleAuthError, TransportError
+from google.auth.exceptions import TimeoutError as GoogleAuthTimeoutError
 from google.auth.transport.requests import AuthorizedSession
 from requests.exceptions import RequestException
 
 from .redaction import redact
+
+_deadline = ContextVar("gcp_deadline", default=None)
 
 
 class GCPError(Exception):
@@ -21,13 +26,36 @@ class GCPError(Exception):
         super().__init__(message)
 
 
+def _remaining():
+    deadline = _deadline.get()
+    if deadline is None:
+        return None
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise GCPError(
+            "deadline_exceeded",
+            "The 120-second collection budget was exhausted. Retry with a narrower query.",
+        )
+    return remaining
+
+
 def _tool(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
+        token = _deadline.set(time.monotonic() + 120) if _deadline.get() is None else None
         try:
+            _remaining()
             return function(*args, **kwargs)
         except GCPError as exc:
             return {"provider": "gcp", "error": {"code": exc.code, "message": str(exc)}}
+        except GoogleAuthTimeoutError:
+            return {
+                "provider": "gcp",
+                "error": {
+                    "code": "deadline_exceeded",
+                    "message": "The GCP request exceeded its time budget. Retry with a narrower query.",
+                },
+            }
         except TransportError:
             return {
                 "provider": "gcp",
@@ -52,6 +80,10 @@ def _tool(function):
                     "message": "GCP request failed or timed out. Check connectivity and retry.",
                 },
             }
+
+        finally:
+            if token is not None:
+                _deadline.reset(token)
 
     return wrapped
 
@@ -107,7 +139,10 @@ def _request(session, method, url, **kwargs):
         )
     ):
         raise GCPError("read_only_violation", "Only allowlisted read-only GCP API calls are permitted.")
-    response = session.request(method, url, timeout=30, **kwargs)
+    remaining = _remaining()
+    response = session.request(
+        method, url, timeout=min(30, remaining) if remaining else 30, max_allowed_time=remaining, **kwargs
+    )
     if not response.ok:
         codes = {
             401: "authentication_failed",

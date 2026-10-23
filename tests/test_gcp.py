@@ -156,3 +156,37 @@ class TransportGuardTest(unittest.TestCase):
             with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "test-project"}):
                 result = gcp.list_gcp_services()
         self.assertEqual(result["error"]["code"], "network_error")
+
+
+class CollectionDeadlineTest(unittest.TestCase):
+    def test_expired_nested_budget_prevents_cloud_calls(self):
+        token = gcp._deadline.set(0)
+        try:
+            with patch.object(gcp, "_session") as session:
+                result = gcp.list_gcp_services()
+            self.assertEqual(result["error"]["code"], "deadline_exceeded")
+            session.assert_not_called()
+            self.assertEqual(gcp._deadline.get(), 0)
+        finally:
+            gcp._deadline.reset(token)
+
+    def test_budget_is_reset_after_error(self):
+        with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": ""}):
+            gcp.list_gcp_services()
+        self.assertIsNone(gcp._deadline.get())
+
+    def test_request_timeout_uses_remaining_budget(self):
+        session = MagicMock()
+        session.request.return_value.ok = True
+        session.request.return_value.json.return_value = {}
+        with patch.object(gcp, "_remaining", return_value=2.5):
+            gcp._request(session, "GET", "https://run.googleapis.com/v2/projects/p")
+        self.assertEqual(session.request.call_args.kwargs["timeout"], 2.5)
+        self.assertEqual(session.request.call_args.kwargs["max_allowed_time"], 2.5)
+
+    def test_google_timeout_is_not_auth_failure(self):
+        from google.auth.exceptions import TimeoutError as GoogleAuthTimeoutError
+
+        with patch.object(gcp, "_session", side_effect=GoogleAuthTimeoutError("timed out")):
+            with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "p"}):
+                self.assertEqual(gcp.list_gcp_services()["error"]["code"], "deadline_exceeded")
