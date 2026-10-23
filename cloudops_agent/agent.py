@@ -16,6 +16,7 @@ from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 from .revisions import compare_gcp_revisions, get_gcp_revision
 from .runtime import check_gcp_service_slo, get_gcp_resource_pressure
+from .snapshots import snapshot_gcp_services
 
 
 def list_aws_instances() -> dict:
@@ -83,6 +84,7 @@ root_agent = Agent(
     tools=[
         diagnose_gcp_service,
         list_gcp_services,
+        snapshot_gcp_services,
         get_gcp_service,
         list_gcp_revisions,
         get_gcp_revision,

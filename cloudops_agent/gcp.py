@@ -223,6 +223,12 @@ def get_gcp_service(service_name: str) -> dict:
             "latest_created_revision": service.get("latestCreatedRevision"),
             "traffic": service.get("trafficStatuses", []),
             "scaling": template.get("scaling", {}),
+            "service_scaling": service.get("scaling", {}),
+            "concurrency": template.get("maxInstanceRequestConcurrency"),
+            "timeout": template.get("timeout"),
+            "service_account": template.get("serviceAccount"),
+            "ingress": service.get("ingress"),
+            "vpc_access": template.get("vpcAccess", {}),
             "containers": [
                 {"name": c.get("name"), "image": c.get("image"), "resources": c.get("resources", {})}
                 for c in template.get("containers", [])
