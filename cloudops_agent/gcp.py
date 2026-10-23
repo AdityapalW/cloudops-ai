@@ -122,6 +122,54 @@ def _session():
     return AuthorizedSession(credentials, refresh_timeout=15)
 
 
+def _api_failure(response):
+    codes = {
+        401: "authentication_failed",
+        403: "permission_denied_or_api_disabled",
+        404: "not_found",
+        429: "quota_exceeded",
+    }
+    code = codes.get(response.status_code, "api_error")
+    message = f"GCP returned HTTP {response.status_code}. Check the resource, enabled API, and the caller's read permissions."
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    error = payload.get("error", {}) if isinstance(payload, dict) else {}
+    reasons = []
+    if isinstance(error, dict):
+        reasons = [
+            entry.get("reason")
+            for entry in error.get("details", [])
+            if isinstance(entry, dict) and entry.get("@type") == "type.googleapis.com/google.rpc.ErrorInfo"
+        ]
+        reasons += [entry.get("reason") for entry in error.get("errors", []) if isinstance(entry, dict)]
+    known = {
+        "SERVICE_DISABLED": (
+            "api_disabled",
+            "The requested API is disabled for the consumer project. A project administrator can enable it if intended.",
+        ),
+        "accessNotConfigured": ("api_disabled", "The requested API is not enabled for the consumer project."),
+        "IAM_PERMISSION_DENIED": (
+            "permission_denied",
+            "The caller lacks a required IAM permission for this read operation.",
+        ),
+        "ACCESS_TOKEN_SCOPE_INSUFFICIENT": (
+            "insufficient_auth_scope",
+            "The access token lacks a required OAuth scope. Check the runtime's credential scopes.",
+        ),
+        "BILLING_DISABLED": (
+            "billing_disabled",
+            "Google reports billing is disabled for the consumer project.",
+        ),
+    }
+    for reason in reasons:
+        if reason in known:
+            code, message = known[reason]
+            break
+    return GCPError(code, message)
+
+
 def _request(session, method, url, **kwargs):
     host = urlparse(url).netloc
     allowed = {
@@ -144,16 +192,7 @@ def _request(session, method, url, **kwargs):
         method, url, timeout=min(30, remaining) if remaining else 30, max_allowed_time=remaining, **kwargs
     )
     if not response.ok:
-        codes = {
-            401: "authentication_failed",
-            403: "permission_denied_or_api_disabled",
-            404: "not_found",
-            429: "quota_exceeded",
-        }
-        raise GCPError(
-            codes.get(response.status_code, "api_error"),
-            f"GCP returned HTTP {response.status_code}. Check the resource, enabled API, and the caller's read permissions.",
-        )
+        raise _api_failure(response)
     try:
         data = response.json()
     except ValueError as exc:

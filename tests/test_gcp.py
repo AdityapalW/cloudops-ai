@@ -190,3 +190,30 @@ class CollectionDeadlineTest(unittest.TestCase):
         with patch.object(gcp, "_session", side_effect=GoogleAuthTimeoutError("timed out")):
             with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "p"}):
                 self.assertEqual(gcp.list_gcp_services()["error"]["code"], "deadline_exceeded")
+
+
+class ApiFailureReasonTest(unittest.TestCase):
+    def test_known_error_info_reasons_are_actionable_without_raw_messages(self):
+        for reason, expected in (
+            ("SERVICE_DISABLED", "api_disabled"),
+            ("IAM_PERMISSION_DENIED", "permission_denied"),
+            ("ACCESS_TOKEN_SCOPE_INSUFFICIENT", "insufficient_auth_scope"),
+            ("BILLING_DISABLED", "billing_disabled"),
+        ):
+            response = MagicMock(status_code=403)
+            response.json.return_value = {
+                "error": {
+                    "message": "private contents",
+                    "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": reason}],
+                }
+            }
+            error = gcp._api_failure(response)
+            self.assertEqual(error.code, expected)
+            self.assertNotIn("private contents", str(error))
+
+    def test_legacy_disabled_api_reason_and_unknown_fallback(self):
+        response = MagicMock(status_code=403)
+        response.json.return_value = {"error": {"errors": [{"reason": "accessNotConfigured"}]}}
+        self.assertEqual(gcp._api_failure(response).code, "api_disabled")
+        response.json.return_value = {"error": {"message": "private"}}
+        self.assertEqual(gcp._api_failure(response).code, "permission_denied_or_api_disabled")
