@@ -66,3 +66,5 @@ API endpoints:
 Partial diagnosis is a 200 response with explicit gaps. Backend auth/network/configuration failures use 5xx responses; invalid query/path values use 422. A not-ready service is a successful diagnostic finding, not an API error.
 
 References: [Cloud Run source deployment](https://docs.cloud.google.com/run/docs/deploying-source-code), [authenticated access](https://docs.cloud.google.com/run/docs/authenticating/developers).
+
+Additional authenticated API routes now include service `/revisions`, `/comparison?before=ID&after=ID`, `/metrics`, `/pressure`, `/slo`, `/errors`, and `/timeline`; `/v1/jobs` plus job `/executions` and `/diagnosis`; and `/v1/configuration-snapshot`. These retain bounded queries, input validation, and `no-store` report responses. Snapshot comparison and report-file export are local CLI operations. Job inspection requires the corresponding Cloud Run Viewer permissions.

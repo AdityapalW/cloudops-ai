@@ -74,3 +74,76 @@ class DeliveryTest(unittest.TestCase):
             stack.enter_context(patch("cloudops_agent.cli.list_gcp_buckets", return_value={"buckets": []}))
             stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
             self.assertEqual(main(["check"]), 2)
+
+
+class ReportExportTest(unittest.TestCase):
+    def test_export_does_not_overwrite_and_markdown_contains_evidence(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory, "report.md")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(main(["demo", "--output", str(path), "--format", "markdown"]), 0)
+                before = path.read_text()
+                self.assertEqual(main(["demo", "--output", str(path), "--format", "markdown"]), 2)
+            self.assertEqual(path.read_text(), before)
+            self.assertIn("## Full evidence", before)
+            self.assertIn("Synthetic fixture data", before)
+
+    def test_evidence_fence_cannot_be_closed_by_log_text(self):
+        from cloudops_agent.reports import render_report
+
+        result = render_report({"evidence": [{"message": "```\n<script>alert(1)</script>\n```"}]}, "markdown")
+        self.assertIn("````json", result)
+
+    def test_snapshot_diff_runs_without_cloud(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from cloudops_agent.revisions import fingerprint
+
+        snapshot = {
+            "schema_version": 1,
+            "kind": "cloudops.cloud_run_configuration",
+            "project": "p",
+            "region": "r",
+            "complete": True,
+            "resources": {"api": {"configuration": {}, "fingerprint": fingerprint({})}},
+        }
+        with TemporaryDirectory() as directory:
+            before = Path(directory, "before.json")
+            after = Path(directory, "after.json")
+            before.write_text(json.dumps(snapshot))
+            after.write_text(json.dumps(snapshot))
+            with patch("cloudops_agent.gcp._session", side_effect=AssertionError("cloud access")):
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(main(["diff", str(before), str(after)]), 0)
+            self.assertEqual(json.loads(output.getvalue())["changed"], [])
+
+
+class ExtendedApiTest(unittest.TestCase):
+    def test_new_routes_validate_before_cloud_access(self):
+        with patch("cloudops_agent.gcp._session", side_effect=AssertionError("unexpected cloud request")):
+            with TestClient(app) as client:
+                for url in (
+                    "/v1/services/api/comparison?before=bad%22&after=api-002",
+                    "/v1/services/api/pressure?threshold=2",
+                    "/v1/services/api/slo?target=1",
+                    "/v1/services/api/errors?revision=bad%22",
+                    "/v1/jobs/batch/diagnosis?stale_after_hours=0",
+                    "/v1/configuration-snapshot?limit=21",
+                ):
+                    self.assertEqual(client.get(url).status_code, 422, url)
+
+    def test_comparison_and_snapshot_routes_preserve_results(self):
+        with patch("cloudops_agent.api.compare_gcp_revisions", return_value={"changes": []}):
+            with patch(
+                "cloudops_agent.api.snapshot_gcp_services", return_value={"complete": True, "resources": {}}
+            ):
+                with TestClient(app) as client:
+                    self.assertEqual(
+                        client.get("/v1/services/api/comparison?before=api-001&after=api-002").json(),
+                        {"changes": []},
+                    )
+                    self.assertTrue(client.get("/v1/configuration-snapshot").json()["complete"])

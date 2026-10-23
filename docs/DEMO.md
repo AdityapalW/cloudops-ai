@@ -65,3 +65,24 @@ Cloud Run's request counter excludes requests that never reach a container. This
 `list_gcp_jobs` lists regional job configuration summaries. `list_gcp_job_executions` returns recent outcomes and task counts. `diagnose_gcp_job` highlights failed/cancelled executions, retried tasks, and an old latest sampled successful completion using a configurable threshold. It does not infer a schedule, and retries may end successfully. All operations are reads; no job is executed or cancelled.
 
 The runtime identity needs `run.jobs.list`, `run.jobs.get`, and `run.executions.list` (included in Cloud Run Viewer). See the [Jobs API](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs) and [executions API](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs.executions).
+
+## Save reports and detect configuration drift
+
+Every CLI command accepts `--format json|markdown` and `--output PATH`. Output files are created exclusively: an existing report is never silently replaced. Markdown reports keep complete evidence inside a code block. Review reports before sharing because redaction is best effort.
+
+```sh
+cloudops demo --scenario startup-failure --format markdown --output /tmp/cloudops-demo.md
+cloudops pressure api --hours 1
+cloudops slo api --target 0.999 --minimum-requests 100
+cloudops errors api --revision api-00002 --hours 1
+cloudops timeline api --hours 1
+cloudops compare api api-00001 api-00002
+cloudops jobs
+cloudops diagnose-job nightly-import --stale-after-hours 24
+cloudops snapshot --output /tmp/cloudops-before.json
+# Capture a second snapshot later, after a change:
+cloudops snapshot --output /tmp/cloudops-after.json
+cloudops diff /tmp/cloudops-before.json /tmp/cloudops-after.json
+```
+
+Snapshots contain only selected configuration fields, with fingerprints for corruption checks. They exclude runtime state, environment values and secret references. Diffing is offline and rejects mismatched project/region scopes. Incomplete inventories produce unconfirmed additions/removals instead of asserting that a resource was created/deleted. Fingerprints detect accidental changes; they are not authenticity signatures.
