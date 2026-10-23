@@ -1,6 +1,6 @@
 # CloudOps AI
 
-A read-only Google ADK assistant for inspecting GCP infrastructure. The existing AWS EC2 tool remains available.
+A read-only Google ADK assistant for inspecting GCP infrastructure. The existing AWS EC2 tool remains available. The GCP milestone now includes revision history, metrics, evidence-backed diagnosis, offline demos, and a stateless diagnostic API.
 
 ## Setup
 
@@ -9,7 +9,8 @@ Use Python 3.11+ and install dependencies:
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock
+pip install --no-deps .
 cp .env.example cloudops_agent/.env
 ```
 
@@ -67,3 +68,32 @@ Metrics use raw DELTA samples over 1–24 hours, capped at 10,000 points per met
 Ask “Why is the api service failing?” to invoke `diagnose_gcp_service`. It collects service readiness, the newest ten revisions, the latest 50 ERROR-or-higher logs, and request metrics for the requested 1–24 hour window. Reports include evidence IDs, observations, possible causes, suggested checks, and explicit collection gaps. `no_issue_detected` is limited to the collected evidence; missing telemetry cannot establish health. Log signatures and revision timing suggest checks rather than prove causation.
 
 Common secret keys and token patterns are redacted, with depth and string-size limits. This is best effort, not a guarantee that logs contain no sensitive data. Source log access must remain appropriately restricted. Set `CLOUDOPS_MODEL` to override the default chat model.
+
+
+## Run and develop
+
+```sh
+# Repeatable offline report; no GCP credentials or model call required:
+python -m cloudops_agent.cli demo --scenario startup-failure
+# Read-only live inventory validation (counts and errors only):
+python -m cloudops_agent.cli check
+# Live diagnosis of a specific service:
+python -m cloudops_agent.cli diagnose YOUR_SERVICE_ID --hours 1
+# Start the local HTTP API on 127.0.0.1:8080 (export configuration first):
+python -m cloudops_agent.server
+```
+
+`pip install .` also installs the `cloudops` command. For development:
+
+```sh
+pip install -r requirements-dev.lock
+ruff check .
+ruff format --check .
+python -m unittest discover -s tests -v
+```
+
+CI checks Python 3.11/3.13 and builds/starts the container. The HTTP API is stateless and runs without model calls; the local ADK chat uses the configured Gemini model. Deployment access is enforced by Cloud Run IAM.
+
+See the [demo guide](docs/DEMO.md), [private deployment runbook](docs/DEPLOYMENT.md), and [progress tracker](docs/PROGRESS.md) for expected outcomes and outstanding live validation.
+
+Runtime and development lock files pin transitive dependencies for repeatable CI/container builds. Update the `.txt` inputs first, then regenerate both `.lock` files with `uv pip compile --python-version 3.11 --universal`.

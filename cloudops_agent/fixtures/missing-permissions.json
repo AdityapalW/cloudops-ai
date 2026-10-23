@@ -1,0 +1,55 @@
+{
+  "service": {
+    "service": {
+      "name": "projects/demo-project/locations/us-central1/services/demo-api",
+      "terminal_condition": {
+        "state": "CONDITION_SUCCEEDED"
+      },
+      "reconciling": false,
+      "latest_ready_revision": "demo-api-001",
+      "latest_created_revision": "demo-api-001",
+      "traffic": [
+        {
+          "revision": "demo-api-001",
+          "percent": 100
+        }
+      ]
+    }
+  },
+  "revisions": {
+    "revisions": [
+      {
+        "name": "demo-api-001",
+        "created": "2026-01-01T12:00:00Z",
+        "conditions": [
+          {
+            "type": "Ready",
+            "state": "CONDITION_SUCCEEDED"
+          }
+        ],
+        "containers": [
+          {
+            "image": "example.invalid/demo:v1",
+            "resources": {
+              "limits": {
+                "memory": "256Mi"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "logs": {
+    "error": {
+      "code": "permission_denied_or_api_disabled",
+      "message": "Synthetic missing Logs Viewer role."
+    }
+  },
+  "metrics": {
+    "error": {
+      "code": "permission_denied_or_api_disabled",
+      "message": "Synthetic missing Monitoring Viewer role."
+    }
+  }
+}
