@@ -46,3 +46,10 @@ No failure exercise is created automatically. Demo fixtures provide a repeatable
 Ask the agent to list revisions, then compare two explicit revision IDs with `compare_gcp_revisions`. It reports nested image, resource, concurrency, timeout, identity, scaling and VPC differences. Sensitive configuration is excluded; omitted fields versus explicit defaults can differ without changing behavior.
 
 `list_gcp_logs` also accepts `revision_name` together with `service_name`, so an error investigation can focus on one revision while retaining project/region/service scope.
+
+## Check pressure and an availability target
+
+- `get_gcp_resource_pressure("api", hours=1)` summarizes CPU/memory distributions and highlights interval means at or above a configurable 0.85 fraction. This is a diagnostic heuristic, not an autoscaling action. The underlying metrics aggregate across instances; container labels are reported only when available.
+- `check_gcp_service_slo("api", target=0.999, hours=1, minimum_requests=100)` evaluates HTTP 5xx against an explicit target. Missing, partial, or low-volume data returns `insufficient_evidence`. The burn rate describes observed error fraction divided by allowed error fraction.
+
+Cloud Run's request counter excludes requests that never reach a container. This is therefore a container-response availability proxy, not a complete external uptime measure. The reported request latency excludes container startup time. These definitions follow the [Cloud Run metric catalog](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#run).

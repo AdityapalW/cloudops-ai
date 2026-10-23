@@ -104,6 +104,7 @@ def get_gcp_service_metrics(service_name: str, hours: int = 1) -> dict:
         "truncated": False,
         "notes": [
             "Cloud Monitoring samples can arrive late; recent minutes may be incomplete.",
+            "Request counts exclude requests that never reach a container; latency excludes container startup time.",
             "Counts include raw DELTA samples returned for this interval; boundary samples can straddle the start.",
             "Latency is weighted by distribution sample count across revisions; it is not p95 or p99.",
         ],
