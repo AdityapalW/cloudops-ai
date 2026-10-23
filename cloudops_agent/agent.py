@@ -2,6 +2,8 @@ import os
 
 import boto3
 from google.adk.agents import Agent
+
+from .diagnosis import diagnose_gcp_service
 from .gcp import (
     get_gcp_service,
     list_gcp_buckets,
@@ -9,8 +11,6 @@ from .gcp import (
     list_gcp_logs,
     list_gcp_services,
 )
-
-from .diagnosis import diagnose_gcp_service
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 
 
@@ -33,11 +33,13 @@ def list_aws_instances() -> dict:
     for page in paginator.paginate():
         for reservation in page["Reservations"]:
             for instance in reservation["Instances"]:
-                instances.append({
-                    "id": instance["InstanceId"],
-                    "type": instance["InstanceType"],
-                    "state": instance["State"]["Name"],
-                })
+                instances.append(
+                    {
+                        "id": instance["InstanceId"],
+                        "type": instance["InstanceType"],
+                        "state": instance["State"]["Name"],
+                    }
+                )
 
     return {
         "provider": "aws",
