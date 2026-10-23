@@ -59,3 +59,9 @@ Cloud Run's request counter excludes requests that never reach a container. This
 `summarize_gcp_errors` groups a bounded ERROR-log sample using redacted message signatures. UUIDs and request/trace IDs are normalized; HTTP status codes remain distinct. Counts are broken down by revision, with first/last sampled timestamps. Duplicate insert IDs are removed only within the same log and timestamp.
 
 `build_gcp_incident_timeline` places those first sampled errors alongside revision creation events. Missing timestamps and partial sources remain explicit. A revision's creation time is not its traffic-promotion time, and the timeline does not establish causation.
+
+## Inspect batch jobs
+
+`list_gcp_jobs` lists regional job configuration summaries. `list_gcp_job_executions` returns recent outcomes and task counts. `diagnose_gcp_job` highlights failed/cancelled executions, retried tasks, and an old latest sampled successful completion using a configurable threshold. It does not infer a schedule, and retries may end successfully. All operations are reads; no job is executed or cancelled.
+
+The runtime identity needs `run.jobs.list`, `run.jobs.get`, and `run.executions.list` (included in Cloud Run Viewer). See the [Jobs API](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs) and [executions API](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs.executions).

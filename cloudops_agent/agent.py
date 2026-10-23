@@ -12,6 +12,7 @@ from .gcp import (
     list_gcp_services,
 )
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
+from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 from .revisions import compare_gcp_revisions, get_gcp_revision
 from .runtime import check_gcp_service_slo, get_gcp_resource_pressure
@@ -94,6 +95,9 @@ root_agent = Agent(
         build_gcp_incident_timeline,
         list_gcp_instances,
         list_gcp_buckets,
+        list_gcp_jobs,
+        list_gcp_job_executions,
+        diagnose_gcp_job,
         list_aws_instances,
     ],
 )
