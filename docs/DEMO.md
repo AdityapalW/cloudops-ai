@@ -40,3 +40,9 @@ Use an isolated sandbox project/service you control. Deploy a known-good contain
 Expected behavior: the report identifies that the newest revision differs from the ready revision, includes startup-related evidence where present, and shows which revision still receives traffic. A failed deployment can leave the older service healthy; the report must not assume a user-visible outage or blame all 5xx responses on the new revision.
 
 No failure exercise is created automatically. Demo fixtures provide a repeatable exercise without infrastructure changes.
+
+## Isolate a rollout
+
+Ask the agent to list revisions, then compare two explicit revision IDs with `compare_gcp_revisions`. It reports nested image, resource, concurrency, timeout, identity, scaling and VPC differences. Sensitive configuration is excluded; omitted fields versus explicit defaults can differ without changing behavior.
+
+`list_gcp_logs` also accepts `revision_name` together with `service_name`, so an error investigation can focus on one revision while retaining project/region/service scope.

@@ -12,6 +12,7 @@ from .gcp import (
     list_gcp_services,
 )
 from .observability import get_gcp_service_metrics, list_gcp_revisions
+from .revisions import compare_gcp_revisions, get_gcp_revision
 
 
 def list_aws_instances() -> dict:
@@ -72,6 +73,7 @@ root_agent = Agent(
     - Present diagnosis status, observations with evidence IDs, hypotheses, data gaps,
       and suggested read-only checks. Cite the tool's evidence IDs for each claim.
     - A no_issue_detected result is limited to returned evidence, not a health guarantee.
+    - Use revision comparisons to inspect deployment configuration differences; filter logs by revision when isolating a rollout.
     - Deployment timing alone does not establish that a revision caused an incident.
     - Bucket metadata alone does not establish effective public access.
     """,
@@ -80,6 +82,8 @@ root_agent = Agent(
         list_gcp_services,
         get_gcp_service,
         list_gcp_revisions,
+        get_gcp_revision,
+        compare_gcp_revisions,
         get_gcp_service_metrics,
         list_gcp_logs,
         list_gcp_instances,
