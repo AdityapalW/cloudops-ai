@@ -44,6 +44,11 @@ def _metric(session, project, region, service, metric, start, end):
         "resource.labels.location": region,
         "resource.labels.service_name": service,
     }
+    return _time_series(session, project, filters, start, end)
+
+
+def _time_series(session, project, filters, start, end):
+    """Bounded raw Monitoring query shared across supported resource types."""
     params = {
         "filter": " AND ".join(f"{k} = {json.dumps(v)}" for k, v in filters.items()),
         "interval.startTime": start,

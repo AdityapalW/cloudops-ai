@@ -68,3 +68,5 @@ Partial diagnosis is a 200 response with explicit gaps. Backend auth/network/con
 References: [Cloud Run source deployment](https://docs.cloud.google.com/run/docs/deploying-source-code), [authenticated access](https://docs.cloud.google.com/run/docs/authenticating/developers).
 
 Additional authenticated API routes now include service `/revisions`, `/comparison?before=ID&after=ID`, `/metrics`, `/pressure`, `/slo`, `/errors`, and `/timeline`; `/v1/jobs` plus job `/executions` and `/diagnosis`; and `/v1/configuration-snapshot`. These retain bounded queries, input validation, and `no-store` report responses. Snapshot comparison and report-file export are local CLI operations. Job inspection requires the corresponding Cloud Run Viewer permissions.
+
+Pub/Sub routes are `/v1/subscriptions` and `/v1/subscriptions/{id}/diagnosis`. Add Pub/Sub Viewer only if these routes are needed. No subscriber or publisher role is required, because the agent does not consume or send messages.

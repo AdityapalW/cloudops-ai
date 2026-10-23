@@ -10,6 +10,7 @@ from .gcp import list_gcp_services
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
 from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
+from .pubsub import diagnose_gcp_subscription, list_gcp_subscriptions
 from .revisions import compare_gcp_revisions
 from .runtime import check_gcp_service_slo, get_gcp_resource_pressure
 from .snapshots import snapshot_gcp_services
@@ -126,3 +127,17 @@ def job_diagnosis(job_name: ResourceID, stale_after_hours: Annotated[int, Query(
 @app.get("/v1/configuration-snapshot")
 def configuration_snapshot(limit: Annotated[int, Query(ge=1, le=20)] = 20):
     return _response(snapshot_gcp_services(limit))
+
+
+@app.get("/v1/subscriptions")
+def subscriptions(limit: Annotated[int, Query(ge=1, le=500)] = 100):
+    return _response(list_gcp_subscriptions(limit))
+
+
+@app.get("/v1/subscriptions/{subscription_name}/diagnosis")
+def subscription_diagnosis(
+    subscription_name: Annotated[str, Path(pattern=r"^[A-Za-z][A-Za-z0-9\-_.~+%]{2,254}$")],
+    backlog_threshold: Annotated[int, Query(ge=1)] = 1000,
+    age_threshold_seconds: Annotated[int, Query(ge=1)] = 300,
+):
+    return _response(diagnose_gcp_subscription(subscription_name, backlog_threshold, age_threshold_seconds))

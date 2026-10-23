@@ -13,6 +13,7 @@ from .gcp import GCPError, list_gcp_buckets, list_gcp_instances, list_gcp_servic
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
 from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
+from .pubsub import diagnose_gcp_subscription, list_gcp_subscriptions
 from .reports import render_report, write_report
 from .revisions import compare_gcp_revisions
 from .runtime import check_gcp_service_slo, get_gcp_resource_pressure
@@ -104,6 +105,12 @@ def main(argv=None):
     job = command("diagnose-job", "Triage job readiness and execution history.")
     job.add_argument("job")
     job.add_argument("--stale-after-hours", type=int, default=24)
+    subscriptions = command("subscriptions", "List project Pub/Sub subscriptions.")
+    subscriptions.add_argument("--limit", type=int, default=100)
+    subscription = command("diagnose-subscription", "Inspect Pub/Sub backlog and acknowledgement age.")
+    subscription.add_argument("subscription")
+    subscription.add_argument("--backlog-threshold", type=int, default=1000)
+    subscription.add_argument("--age-threshold-seconds", type=int, default=300)
     snapshot = command("snapshot", "Capture a portable Cloud Run configuration snapshot.")
     snapshot.add_argument("--limit", type=int, default=20)
     diff = command("diff", "Compare two local JSON snapshots without cloud access.")
@@ -140,6 +147,10 @@ def main(argv=None):
                 "jobs": lambda: list_gcp_jobs(args.limit),
                 "executions": lambda: list_gcp_job_executions(args.job, args.limit),
                 "diagnose-job": lambda: diagnose_gcp_job(args.job, args.stale_after_hours),
+                "subscriptions": lambda: list_gcp_subscriptions(args.limit),
+                "diagnose-subscription": lambda: diagnose_gcp_subscription(
+                    args.subscription, args.backlog_threshold, args.age_threshold_seconds
+                ),
                 "snapshot": lambda: snapshot_gcp_services(args.limit),
                 "check": lambda: _live_checks(args.service),
             }

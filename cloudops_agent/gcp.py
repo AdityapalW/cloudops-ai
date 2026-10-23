@@ -178,6 +178,7 @@ def _request(session, method, url, **kwargs):
         "compute.googleapis.com",
         "storage.googleapis.com",
         "monitoring.googleapis.com",
+        "pubsub.googleapis.com",
     }
     if (
         urlparse(url).scheme != "https"

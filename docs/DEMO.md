@@ -86,3 +86,14 @@ cloudops diff /tmp/cloudops-before.json /tmp/cloudops-after.json
 ```
 
 Snapshots contain only selected configuration fields, with fingerprints for corruption checks. They exclude runtime state, environment values and secret references. Diffing is offline and rejects mismatched project/region scopes. Incomplete inventories produce unconfirmed additions/removals instead of asserting that a resource was created/deleted. Fingerprints detect accidental changes; they are not authenticity signatures.
+
+## Investigate Pub/Sub delivery pressure
+
+```sh
+cloudops subscriptions
+cloudops diagnose-subscription orders-worker --backlog-threshold 1000 --age-threshold-seconds 300
+```
+
+The assistant can list project-wide subscription metadata and inspect the latest global backlog/oldest-unacknowledged-message-age samples. Gauges are never summed over time; absent, stale, ambiguous, and partial data remain explicit. Push endpoint credentials, paths, queries and OIDC configuration details are excluded. No messages are pulled or acknowledged.
+
+Use `roles/pubsub.viewer` for metadata reads and Monitoring Viewer for telemetry. The relevant APIs are `pubsub.googleapis.com` and `monitoring.googleapis.com`. Global metrics can hide regional variation; investigate regional metrics when needed. See [Pub/Sub monitoring](https://docs.cloud.google.com/pubsub/docs/monitoring).
