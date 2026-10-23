@@ -2,6 +2,29 @@
 
 A read-only Google ADK assistant for inspecting GCP infrastructure. The existing AWS EC2 tool remains available. The GCP milestone now includes revision history, metrics, evidence-backed diagnosis, offline demos, and a stateless diagnostic API.
 
+## Try it offline
+
+```sh
+.venv/bin/python -m cloudops_agent.cli demo --deep --scenario memory-pressure --format markdown
+```
+
+The demo uses synthetic data and requires no cloud credentials or model calls. For live work, use the configured project and region with the read permissions below.
+
+## Investigation workflows
+
+| Workflow | CLI | Agent capability |
+| --- | --- | --- |
+| Regional overview | `cloudops fleet` | Prioritized, bounded triage with explicit coverage |
+| Deep service investigation | `cloudops investigate SERVICE` | Readiness, metrics, resource pressure, error patterns, timeline, revision differences |
+| Revision comparison | `cloudops compare SERVICE BEFORE AFTER` | Allowlisted configuration diff without secret values |
+| Availability target | `cloudops slo SERVICE --target 0.999` | Observed container-response availability and error-budget burn |
+| Error grouping/timeline | `cloudops errors SERVICE`, `cloudops timeline SERVICE` | Redacted signatures and sampled event chronology |
+| Batch jobs | `cloudops jobs`, `cloudops diagnose-job JOB` | Execution outcomes, retries and selected staleness threshold |
+| Pub/Sub | `cloudops subscriptions`, `cloudops diagnose-subscription SUB` | Metadata, latest backlog and acknowledgement-age gauges |
+| Configuration drift | `cloudops snapshot`, `cloudops diff BEFORE AFTER` | Portable snapshots and offline comparison with scope/completeness checks |
+
+All CLI commands accept `--format json|markdown` and `--output PATH`. Exports use private file permissions and refuse to overwrite existing files. Agent tools and HTTP routes expose these workflows too; offline file comparison/export remains a CLI operation.
+
 ## Setup
 
 Use Python 3.11+ and install dependencies:
@@ -97,3 +120,8 @@ CI checks Python 3.11/3.13 and builds/starts the container. The HTTP API is stat
 See the [demo guide](docs/DEMO.md), [private deployment runbook](docs/DEPLOYMENT.md), and [progress tracker](docs/PROGRESS.md) for expected outcomes and outstanding live validation.
 
 Runtime and development lock files pin transitive dependencies for repeatable CI/container builds. Update the `.txt` inputs first, then regenerate both `.lock` files with `uv pip compile --python-version 3.11 --universal`.
+
+
+For Jobs, the caller also needs `run.jobs.list`, `run.jobs.get`, and `run.executions.list` (Cloud Run Viewer). For Pub/Sub metadata, enable `pubsub.googleapis.com` and grant Pub/Sub Viewer as needed; no message-consumption or publishing permissions are required. Full API/CLI examples and limitations are in the demo guide.
+
+Verification currently includes 102 tests on Python 3.11/3.13 and an offline ADK runner test. These are functional and integration checks using a scripted model, not measurements of a real model's reasoning quality. Live read probes succeeded for Cloud Run, Storage, Logging, Monitoring, Jobs and Pub/Sub in the configured environment, but returned empty inventories/no service telemetry. Compute's API is disabled. Cloud deployment and a real-service failure exercise remain outstanding.
