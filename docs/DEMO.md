@@ -53,3 +53,9 @@ Ask the agent to list revisions, then compare two explicit revision IDs with `co
 - `check_gcp_service_slo("api", target=0.999, hours=1, minimum_requests=100)` evaluates HTTP 5xx against an explicit target. Missing, partial, or low-volume data returns `insufficient_evidence`. The burn rate describes observed error fraction divided by allowed error fraction.
 
 Cloud Run's request counter excludes requests that never reach a container. This is therefore a container-response availability proxy, not a complete external uptime measure. The reported request latency excludes container startup time. These definitions follow the [Cloud Run metric catalog](https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z#run).
+
+## Build an incident timeline
+
+`summarize_gcp_errors` groups a bounded ERROR-log sample using redacted message signatures. UUIDs and request/trace IDs are normalized; HTTP status codes remain distinct. Counts are broken down by revision, with first/last sampled timestamps. Duplicate insert IDs are removed only within the same log and timestamp.
+
+`build_gcp_incident_timeline` places those first sampled errors alongside revision creation events. Missing timestamps and partial sources remain explicit. A revision's creation time is not its traffic-promotion time, and the timeline does not establish causation.
