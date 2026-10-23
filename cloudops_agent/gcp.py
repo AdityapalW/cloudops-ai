@@ -8,7 +8,7 @@ from functools import wraps
 from urllib.parse import quote
 
 import google.auth
-from google.auth.exceptions import GoogleAuthError
+from google.auth.exceptions import GoogleAuthError, TransportError
 from google.auth.transport.requests import AuthorizedSession
 from requests.exceptions import RequestException
 
@@ -26,6 +26,10 @@ def _tool(function):
             return function(*args, **kwargs)
         except GCPError as exc:
             return {"provider": "gcp", "error": {"code": exc.code, "message": str(exc)}}
+        except TransportError:
+            return {"provider": "gcp", "error": {
+                "code": "network_error", "message": "Credential refresh could not reach Google. Check connectivity and retry.",
+            }}
         except GoogleAuthError:
             return {"provider": "gcp", "error": {
                 "code": "authentication_failed",
@@ -51,7 +55,7 @@ def _segment(value):
 
 
 def _service_name(value):
-    if not re.fullmatch(r"[a-z][a-z0-9-]{0,48}[a-z0-9]|[a-z]", value):
+    if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,48}[a-z0-9]|[a-z]", value):
         raise GCPError("invalid_argument", "Use a Cloud Run service ID, not a URL or resource path (maximum 50 characters).")
     return value
 
@@ -62,7 +66,7 @@ def _limit(value, maximum=500):
 
 
 def _session():
-    credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform.read-only"])
+    credentials, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
     return AuthorizedSession(credentials)
 
 
@@ -127,6 +131,8 @@ def list_gcp_logs(service_name: str = "", severity: str = "DEFAULT", hours: int 
     _limit(limit, 200)
     if isinstance(hours, bool) or not isinstance(hours, int) or not 1 <= hours <= 168:
         raise GCPError("invalid_argument", "hours must be an integer between 1 and 168.")
+    if not isinstance(severity, str):
+        raise GCPError("invalid_argument", "severity must be a string.")
     severity = severity.upper()
     if severity not in {"DEFAULT", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL", "ALERT", "EMERGENCY"}:
         raise GCPError("invalid_argument", "Use a standard Cloud Logging severity such as INFO, WARNING, or ERROR.")

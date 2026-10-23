@@ -10,6 +10,7 @@ from .gcp import (
     list_gcp_services,
 )
 
+from .observability import get_gcp_service_metrics, list_gcp_revisions
 
 
 def list_aws_instances() -> dict:
@@ -70,6 +71,8 @@ root_agent = Agent(
     tools=[
         list_gcp_services,
         get_gcp_service,
+        list_gcp_revisions,
+        get_gcp_service_metrics,
         list_gcp_logs,
         list_gcp_instances,
         list_gcp_buckets,
