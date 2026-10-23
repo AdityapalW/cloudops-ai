@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from .diagnosis import build_report, diagnose_gcp_service
 from .gcp import GCPError, list_gcp_buckets, list_gcp_instances, list_gcp_services
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
+from .investigation import investigate_gcp_service
 from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 from .pubsub import diagnose_gcp_subscription, list_gcp_subscriptions
@@ -82,7 +83,7 @@ def main(argv=None):
         choices=("startup-failure", "memory-pressure", "healthy", "missing-permissions"),
         default="startup-failure",
     )
-    for name in ("diagnose", "metrics", "pressure", "errors", "timeline", "slo"):
+    for name in ("diagnose", "investigate", "metrics", "pressure", "errors", "timeline", "slo"):
         item = command(name, "Read-only Cloud Run " + name + ".")
         item.add_argument("service")
         item.add_argument("--hours", type=int, default=1)
@@ -134,6 +135,7 @@ def main(argv=None):
         else:
             load_dotenv(args.env_file, override=False)
             dispatch = {
+                "investigate": lambda: investigate_gcp_service(args.service, args.hours),
                 "diagnose": lambda: diagnose_gcp_service(args.service, args.hours),
                 "metrics": lambda: get_gcp_service_metrics(args.service, args.hours),
                 "pressure": lambda: get_gcp_resource_pressure(args.service, args.hours, args.threshold),

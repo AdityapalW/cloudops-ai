@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from .diagnosis import diagnose_gcp_service
 from .gcp import list_gcp_services
 from .incidents import build_gcp_incident_timeline, summarize_gcp_errors
+from .investigation import investigate_gcp_service
 from .jobs import diagnose_gcp_job, list_gcp_job_executions, list_gcp_jobs
 from .observability import get_gcp_service_metrics, list_gcp_revisions
 from .pubsub import diagnose_gcp_subscription, list_gcp_subscriptions
@@ -141,3 +142,8 @@ def subscription_diagnosis(
     age_threshold_seconds: Annotated[int, Query(ge=1)] = 300,
 ):
     return _response(diagnose_gcp_subscription(subscription_name, backlog_threshold, age_threshold_seconds))
+
+
+@app.get("/v1/services/{service_name}/investigation")
+def investigation(service_name: ServiceID, hours: Annotated[int, Query(ge=1, le=24)] = 1):
+    return _response(investigate_gcp_service(service_name, hours))

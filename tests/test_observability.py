@@ -111,3 +111,10 @@ class ObservabilityTest(unittest.TestCase):
         self.assertIn("error", obs.list_gcp_revisions("bad/name"))
         self.assertIn("error", obs.get_gcp_service_metrics("api", hours=25))
         self.session.request.assert_not_called()
+
+    def test_unknown_response_class_cannot_report_zero_errors(self):
+        self.pages({"timeSeries": [series([10], code="unknown")]}, {})
+        result = obs.get_gcp_service_metrics("api")
+        self.assertEqual(result["request_count"], 10)
+        self.assertIsNone(result["server_error_rate"])
+        self.assertTrue(result["partial"])

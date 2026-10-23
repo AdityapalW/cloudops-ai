@@ -156,7 +156,7 @@ def build_report(service_name, project, region, sources):
             )
 
     revisions = sources.get("revisions", {}).get("revisions", [])
-    newest = service.get("latest_created_revision", "").rsplit("/", 1)[-1]
+    newest = (service.get("latest_created_revision") or "").rsplit("/", 1)[-1]
     for revision in revisions:
         if newest and revision.get("name", "").rsplit("/", 1)[-1] == newest:
             if not revision.get("reconciling") and any(

@@ -5,6 +5,7 @@ import json
 import re
 
 from .gcp import GCPError, _context, _request, _segment, _service_name, _session, _tool
+from .redaction import redact
 
 
 def revision_id(value):
@@ -69,7 +70,7 @@ def get_gcp_revision(service_name: str, revision_name: str) -> dict:
         "revision": {
             "name": revision.get("name"),
             "created": revision.get("createTime"),
-            "conditions": revision.get("conditions", []),
+            "conditions": redact(revision.get("conditions", [])),
             "reconciling": revision.get("reconciling", False),
             "configuration": config,
             "configuration_fingerprint": fingerprint(config),

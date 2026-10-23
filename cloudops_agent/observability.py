@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from .gcp import GCPError, _context, _limit, _pages, _request, _segment, _service_name, _session, _tool
+from .redaction import redact
 
 
 @_tool
@@ -23,7 +24,7 @@ def list_gcp_revisions(service_name: str, limit: int = 10) -> dict:
             {
                 "name": r.get("name"),
                 "created": r.get("createTime"),
-                "conditions": r.get("conditions", []),
+                "conditions": redact(r.get("conditions", [])),
                 "reconciling": r.get("reconciling", False),
                 "containers": [
                     {"image": c.get("image"), "resources": c.get("resources", {})}
@@ -130,7 +131,7 @@ def get_gcp_service_metrics(service_name: str, hours: int = 1) -> dict:
                     "message": "Monitoring reported incomplete query execution.",
                 }
             if metric == "request_count":
-                total = server = client = samples = 0
+                total = server = client = samples = unclassified = 0
                 for row in rows:
                     labels = row.get("metric", {}).get("labels", {})
                     code = str(labels.get("response_code_class", ""))
@@ -146,6 +147,8 @@ def get_gcp_service_metrics(service_name: str, hours: int = 1) -> dict:
                         value = int(point["value"]["int64Value"])
                         samples += 1
                         total += value
+                        if code not in {"1xx", "2xx", "3xx", "4xx", "5xx"}:
+                            unclassified += value
                         counts["request_count"] += value
                         if code == "5xx":
                             server += value
@@ -157,9 +160,14 @@ def get_gcp_service_metrics(service_name: str, hours: int = 1) -> dict:
                         request_count=total,
                         server_error_count=server,
                         client_error_count=client,
-                        server_error_rate=server / total if total else None,
-                        client_error_rate=client / total if total else None,
+                        server_error_rate=server / total if total and not unclassified else None,
+                        client_error_rate=client / total if total and not unclassified else None,
                     )
+                if unclassified:
+                    result["errors"]["request_count"] = {
+                        "code": "unknown_response_class",
+                        "message": "Some request samples lack a recognized HTTP response class; error rates are unknown.",
+                    }
             else:
                 weighted_sum = 0.0
                 count = 0

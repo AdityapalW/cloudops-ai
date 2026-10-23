@@ -232,7 +232,7 @@ def list_gcp_services(limit: int = 100) -> dict:
                 "name": s["name"],
                 "uri": s.get("uri"),
                 "reconciling": s.get("reconciling", False),
-                "ready_condition": s.get("terminalCondition"),
+                "ready_condition": redact(s.get("terminalCondition")),
             }
             for s in services
         ],
@@ -257,8 +257,8 @@ def get_gcp_service(service_name: str) -> dict:
             "name": service.get("name"),
             "uri": service.get("uri"),
             "reconciling": service.get("reconciling", False),
-            "conditions": service.get("conditions", []),
-            "terminal_condition": service.get("terminalCondition"),
+            "conditions": redact(service.get("conditions", [])),
+            "terminal_condition": redact(service.get("terminalCondition")),
             "latest_ready_revision": service.get("latestReadyRevision"),
             "latest_created_revision": service.get("latestCreatedRevision"),
             "traffic": service.get("trafficStatuses", []),

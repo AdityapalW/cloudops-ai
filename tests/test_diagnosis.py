@@ -143,3 +143,11 @@ class EvidenceCompletenessTest(unittest.TestCase):
         report = build_report("api", "p", "r", sources)
         self.assertEqual(report["status"], "issues_detected")
         self.assertEqual(report["findings"][0]["code"], "error_logs_present")
+
+    def test_service_without_created_revision_is_incomplete_not_exception(self):
+        sources = baseline()
+        sources["service"]["service"].update(
+            latest_created_revision=None, latest_ready_revision=None, terminal_condition=None
+        )
+        result = build_report("api", "p", "r", sources)
+        self.assertEqual(result["status"], "insufficient_evidence")

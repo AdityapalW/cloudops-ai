@@ -97,3 +97,11 @@ cloudops diagnose-subscription orders-worker --backlog-threshold 1000 --age-thre
 The assistant can list project-wide subscription metadata and inspect the latest global backlog/oldest-unacknowledged-message-age samples. Gauges are never summed over time; absent, stale, ambiguous, and partial data remain explicit. Push endpoint credentials, paths, queries and OIDC configuration details are excluded. No messages are pulled or acknowledged.
 
 Use `roles/pubsub.viewer` for metadata reads and Monitoring Viewer for telemetry. The relevant APIs are `pubsub.googleapis.com` and `monitoring.googleapis.com`. Global metrics can hide regional variation; investigate regional metrics when needed. See [Pub/Sub monitoring](https://docs.cloud.google.com/pubsub/docs/monitoring).
+
+## Run a deeper investigation
+
+```sh
+cloudops investigate api --hours 1 --format markdown --output /tmp/cloudops-investigation.md
+```
+
+The deeper workflow reuses the diagnosis's log/revision sample, adds CPU/memory evidence, and compares the latest ready and newest created revision only when they differ. It includes a compact error-pattern index and a timeline, with new findings linked to evidence IDs. All nested calls share one collection deadline. Configuration changes alone are informational, not proof of an incident.
